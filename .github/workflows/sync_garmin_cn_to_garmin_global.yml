@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
 
   schedule:
-    # UTC 时间
-    # 北京时间约 08:17 和 20:17
-    - cron: "17 0,12 * * *"
+    # GitHub Actions cron 使用 UTC
+    # 北京时间每天 11:00 和 23:00
+    - cron: "0 3,15 * * *"
 
 concurrency:
   group: garmin-cn-to-global
