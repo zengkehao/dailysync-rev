@@ -5,7 +5,7 @@ on:
 
   schedule:
     # GitHub Actions cron 使用 UTC
-    # 北京时间每天 10:47 和 22:46
+    # 北京时间每天 10:47 和 22:47
     - cron: "47 2,14 * * *"
 
 concurrency:
