@@ -5,8 +5,8 @@ on:
 
   schedule:
     # GitHub Actions cron 使用 UTC
-    # 北京时间每天 11:00 和 23:00
-    - cron: "0 3,15 * * *"
+    # 北京时间每天 10:47 和 22:46
+    - cron: "47 2,14 * * *"
 
 concurrency:
   group: garmin-cn-to-global
