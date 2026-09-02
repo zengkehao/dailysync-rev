@@ -1,60 +1,57 @@
-name: Sync Garmin CN to Garmin Global
+name: Sync Garmin CN to Global
 
 on:
   workflow_dispatch:
-    inputs:
-      sync_command:
-        description: "同步命令：普通 sync 只同步活动；sync_all 同步活动+Wellness；sync_wellness 只同步 Wellness"
-        required: true
-        default: "sync_cn"
-        type: choice
-        options:
-          - sync_cn
-          - sync_all_cn_to_global
-          - sync_wellness_cn_to_global
-          - sync_global
-          - sync_all_global_to_cn
-          - sync_wellness_global_to_cn
+
   schedule:
-    #  每6小时检查一次
-    - cron: "0 */6 * * *"
-  push:
-    branches:
-      - main
+    # UTC 时间
+    # 北京时间约 08:17 和 20:17
+    - cron: "17 0,12 * * *"
+
+concurrency:
+  group: garmin-cn-to-global
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
-  # please change to your own config.
-  RQ_COOKIE: ${{ secrets.RQ_COOKIE }}
-  RQ_CSRF_TOKEN: ${{ secrets.RQ_CSRF_TOKEN }}
-  RQ_USERID: ${{ secrets.RQ_USERID }}
-  GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
-  GOOGLE_API_CLIENT_EMAIL: ${{ secrets.GOOGLE_API_CLIENT_EMAIL }}
-  GOOGLE_API_PRIVATE_KEY: ${{ secrets.GOOGLE_API_PRIVATE_KEY }}
-  BARK_KEY: ${{ secrets.BARK_KEY }}
   GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
   GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+
   GARMIN_GLOBAL_USERNAME: ${{ secrets.GARMIN_GLOBAL_USERNAME }}
   GARMIN_GLOBAL_PASSWORD: ${{ secrets.GARMIN_GLOBAL_PASSWORD }}
-  # Wellness 健康数据默认关闭；需要同步步数、睡眠、HRV、压力等数据时，在 Secrets 中设置 GARMIN_SYNC_WELLNESS=true
-  GARMIN_SYNC_WELLNESS: ${{ secrets.GARMIN_SYNC_WELLNESS }}
-  # 日常同步时检查最近几天的健康数据；未配置时默认为 1
-  GARMIN_WELLNESS_SYNC_DAYS: ${{ secrets.GARMIN_WELLNESS_SYNC_DAYS }}
+
+  GARMIN_CN_OAUTH1: ${{ secrets.GARMIN_CN_OAUTH1 }}
+  GARMIN_CN_OAUTH2: ${{ secrets.GARMIN_CN_OAUTH2 }}
+
+  GARMIN_GLOBAL_OAUTH1: ${{ secrets.GARMIN_GLOBAL_OAUTH1 }}
+  GARMIN_GLOBAL_OAUTH2: ${{ secrets.GARMIN_GLOBAL_OAUTH2 }}
 
 jobs:
-  build:
+  sync:
     runs-on: ubuntu-latest
-    name: Sync Garmin CN to Garmin Global
-    permissions:
-      contents: write
+    timeout-minutes: 10
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'yarn'
-      - run: yarn
-      - run: yarn ${{ github.event.inputs.sync_command || 'sync_cn' }}
-        timeout-minutes: 15
-      - uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: Save Garmin Session
+          node-version: "18"
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Check Garmin sessions
+        run: |
+          test -n "$GARMIN_CN_OAUTH1" || exit 1
+          test -n "$GARMIN_CN_OAUTH2" || exit 1
+          test -n "$GARMIN_GLOBAL_OAUTH1" || exit 1
+          test -n "$GARMIN_GLOBAL_OAUTH2" || exit 1
+
+      - name: Sync Garmin CN to Global
+        run: yarn sync_cn
